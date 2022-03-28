@@ -13,3 +13,8 @@ negLogLik(1,1,1,res)
 mleFull(res,exampleParams())
 mleLiron(res)
 mleOneKnown(res,exampleParams(),"gamma")
+mleOneKnown(res,exampleParams(),"lambda_0")
+mleOneKnown(res,exampleParams(),"theta")
+
+f <- oneKnownLik(which_known = "gamma",exampleParams(),AWX = res)
+f(c(3,20))

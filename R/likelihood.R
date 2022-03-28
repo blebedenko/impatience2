@@ -138,7 +138,81 @@ gradLogLik <- function(gamma,lambda_0,theta, AWX) {
 
 }
 
+#' Gradient of  likelihood, vector form
+#'
+#' @param g_l0_t vector c(gamma, lambda_0, theta)
+#' @param AWX AWX
+#'
+#' @return the gradient at (gamma,lambda_0,theta) for data AWX
+#' @export
+gradLogLik.vec <- function(g_l0_t, AWX) {
+  gamma <- g_l0_t[1]
+  lambda_0 <- g_l0_t[2]
+  theta <- g_l0_t[3]
+  A <- AWX$A
+  W <- AWX$W
+  X <- AWX$X
+  A_i = A[-1]
+  A_tilde <- c(0, cumsum(A))
+  A_tilde <- A_tilde[-length(A_tilde)]
+  A_tilde_i = cumsum(A_i)
+  W_i = W[-1]
+  w_i = W[-length(W)]
+  x_i = X[-length(X)]
 
+
+
+  # derivative by gamma:
+  dl_gamma <-
+    (cos(A_tilde_i * pi * 2) / 2 + 1 / 2) /
+    (gamma / 2 + lambda_0 + (gamma * cos(A_tilde_i * pi * 2)) / 2) - (exp(-theta *
+                                                                            (w_i + x_i)) * (exp(A_i * theta) - 1)) / (theta * 2) + (exp(-theta * (w_i +
+                                                                                                                                                    x_i)) * (
+                                                                                                                                                      pi * sin(A_tilde_i * pi * 2) * 2 + theta * cos(A_tilde_i * pi * 2) - pi *
+                                                                                                                                                        sin(pi * (A_i + A_tilde_i) * 2) * exp(A_i * theta) * 2 - theta * exp(A_i *
+                                                                                                                                                                                                                               theta) * cos(pi * (A_i + A_tilde_i) * 2)
+                                                                                                                                                    )) / (pi ^ 2 * 8 + theta ^ 2 * 2)
+
+  #derivative by lambda_0:
+  dl_lambda_0 <-
+    1 / (gamma / 2 + lambda_0 + (gamma * cos(A_tilde_i * pi * 2)) / 2) -
+    (exp(-theta * (w_i + x_i)) * (exp(A_i * theta) - 1)) / theta
+
+  # derivative by theta:
+  dl_theta <-
+    -W_i + lambda_0 * 1 / theta ^ 2 * exp(-theta * (w_i + x_i)) * (exp(A_i *
+                                                                         theta) - 1) - (gamma * exp(-theta * (w_i + x_i)) * (
+                                                                           -cos(A_tilde_i * pi * 2) + exp(A_i * theta) * cos(pi * (A_i + A_tilde_i) *
+                                                                                                                               2) + A_i * pi * sin(pi * (A_i + A_tilde_i) * 2) * exp(A_i * theta) * 2 +
+                                                                             A_i * theta * exp(A_i * theta) * cos(pi * (A_i + A_tilde_i) * 2)
+                                                                         )) / (pi ^ 2 * 8 + theta ^ 2 * 2) + (gamma * 1 / theta ^ 2 * exp(-theta *
+                                                                                                                                            (w_i + x_i)) * (exp(A_i * theta) - 1)) / 2 + (gamma * exp(-theta * (w_i +
+                                                                                                                                                                                                                  x_i)) * (w_i + x_i) * (exp(A_i * theta) - 1)) / (theta * 2) - (
+                                                                                                                                                                                                                    gamma * exp(-theta * (w_i + x_i)) * (w_i + x_i) * (
+                                                                                                                                                                                                                      pi * sin(A_tilde_i * pi * 2) * 2 + theta * cos(A_tilde_i * pi * 2) - pi *
+                                                                                                                                                                                                                        sin(pi * (A_i + A_tilde_i) * 2) * exp(A_i * theta) * 2 - theta * exp(A_i *
+                                                                                                                                                                                                                                                                                               theta) * cos(pi * (A_i + A_tilde_i) * 2)
+                                                                                                                                                                                                                    )
+                                                                                                                                                                                                                  ) / (pi ^ 2 * 8 + theta ^ 2 * 2) + (lambda_0 * exp(-theta * (w_i + x_i)) *
+                                                                                                                                                                                                                                                        (w_i + x_i) * (exp(A_i * theta) - 1)) / theta - gamma * theta * exp(-theta *
+                                                                                                                                                                                                                                                                                                                              (w_i + x_i)) * 1 / (pi ^ 2 * 4 + theta ^ 2) ^ 2 * (
+                                                                                                                                                                                                                                                                                                                                pi * sin(A_tilde_i * pi * 2) * 2 + theta * cos(A_tilde_i * pi * 2) - pi *
+                                                                                                                                                                                                                                                                                                                                  sin(pi * (A_i + A_tilde_i) * 2) * exp(A_i * theta) * 2 - theta * exp(A_i *
+                                                                                                                                                                                                                                                                                                                                                                                                         theta) * cos(pi * (A_i + A_tilde_i) * 2)
+                                                                                                                                                                                                                                                                                                                              ) - (A_i * gamma * exp(A_i * theta) * exp(-theta * (w_i + x_i))) / (theta *
+                                                                                                                                                                                                                                                                                                                                                                                                    2) - (A_i * lambda_0 * exp(A_i * theta) * exp(-theta * (w_i + x_i))) / theta
+  # return the negative of the gradient elements' mean
+  negativeGradientMean <-
+    -c(mean(dl_gamma), mean(dl_lambda_0), mean(dl_theta))
+
+  names(negativeGradientMean) <- c("gamma","lambda_0","theta")
+
+  return(negativeGradientMean)
+
+
+
+
+}
 #' Cheap evaluation of the gradient
 #'
 #' @param params list of parameters
@@ -293,9 +367,9 @@ oneKnownLik <- function(which_known,params, AWX){
 #' @return a gradient function for the two other parameter
 #' @export
 oneKnownGrad <- function(which_known,params, AWX){
-  gamma <- params$gamma
-  lambda_0 <- params$lambda_0
-  theta <- params$theta
+  # gamma <- params$gamma
+  # lambda_0 <- params$lambda_0
+  # theta <- params$theta
   which_uknown <- setdiff(names(GL0T(params)), which_known)
   if (which_known == "gamma") {
 
