@@ -438,7 +438,7 @@ twoKnownLik <- function(which_not_known,params, AWX){
 #' @export
 #'
 mleFull <- function(AWX, params) {
-  g_l0_t <- c(params$gamma,params$lambda_0,params$theta)
+  g_l0_t <- GL0T(params)
   opt <-
     optim(
       g_l0_t,
@@ -447,7 +447,7 @@ mleFull <- function(AWX, params) {
       lower = g_l0_t / 10,
       upper = g_l0_t * 10,
       method = "L-BFGS-B",
-      gr = gradLogLik,
+      gr = gradLogLik.vec,
       AWX = AWX
     )
   is_boundary <- any((opt$par == g_l0_t / 10) |
