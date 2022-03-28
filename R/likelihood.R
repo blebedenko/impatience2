@@ -415,14 +415,14 @@ twoKnownLik <- function(which_not_known,params, AWX){
   )
 
   if (which_not_known == "gamma") {
-  oneLik <- purrr::partial(negLik,AWX = AWX, lambda_0 = lambda_0, theta = theta)
+  oneLik <- purrr::partial(negLogLik,AWX = AWX, lambda_0 = lambda_0, theta = theta)
   }
   if (which_not_known == "lambda_0") {
-    oneLik <- purrr::partial(negLik,AWX = AWX, gamma = gamma, theta = theta)
+    oneLik <- purrr::partial(negLogLik,AWX = AWX, gamma = gamma, theta = theta)
 
   }
   if (which_not_known == "theta") {
-    oneLik <- purrr::partial(negLik,AWX = AWX, gamma = gamma ,lambda_0 = lambda_0)
+    oneLik <- purrr::partial(negLogLik,AWX = AWX, gamma = gamma ,lambda_0 = lambda_0)
 
   }
   return(Vectorize(oneLik))
@@ -533,3 +533,36 @@ mleOneKnown <- function(AWX, params, which_known){
   return(mle)
 }
 
+
+#' Mle with two known parameters
+#'
+#' @param AWX data
+#' @param params parameters
+#' @param which_not_known name of the UNKNOWN parameter to be estimated
+#'
+#' @return Maximum likelihood estimates when one known parameter
+#' @export
+mleTwoKnown <- function(AWX, params, which_not_known){
+
+  gamma <- params$gamma
+  lambda_0 <- params$lambda_0
+  theta <- params$theta
+
+  which_known <- setdiff(names(GL0T(params)), which_not_known)
+  if (which_not_known == "gamma") {
+    oneLik <- purrr::partial(negLogLik,AWX = AWX, lambda_0 = lambda_0, theta = theta)
+  }
+  if (which_not_known == "lambda_0") {
+    oneLik <- purrr::partial(negLogLik,AWX = AWX, gamma = gamma, theta = theta)
+
+  }
+  if (which_not_known == "theta") {
+    oneLik <- purrr::partial(negLogLik,AWX = AWX, gamma = gamma ,lambda_0 = lambda_0)
+
+  }
+  oneLik.vec <- Vectorize(oneLik)
+  opt <- stats::optimize(f = oneLik.vec,
+           lower =params[[which_not_known]]/10,
+           upper = params[[which_not_known]] * 10)
+  return(opt$minimum)
+}
