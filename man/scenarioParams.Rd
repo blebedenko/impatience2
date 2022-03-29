@@ -4,17 +4,17 @@
 \alias{scenarioParams}
 \title{parameters by simulation scenario}
 \usage{
-scenarioParams(scenario_name)
+scenarioParams(scenario_name = "C4")
 }
 \arguments{
 \item{scenario_name}{"C1", "C2", "C3", "C4".}
 }
 \value{
-params list with NA n. servers
+params list with example number of servers
 }
 \description{
 parameters by simulation scenario
 }
 \examples{
-scenarioParams("C3")
+scenarioParams("C4")
 }

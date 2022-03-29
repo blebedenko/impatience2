@@ -16,6 +16,8 @@ Imports:
     dplyr,
     foreach,
     graphics,
+    lattice,
+    latticeExtra,
     magrittr,
     purrr,
     readr,
@@ -23,6 +25,7 @@ Imports:
     stringr,
     svDialogs,
     svMisc,
+    tibble,
     utils,
     withr
 Suggests: 

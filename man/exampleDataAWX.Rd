@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{exampleDataAWX}
 \alias{exampleDataAWX}
-\title{Auxiliary function to create example dataset}
+\title{Auxiliary function to create example dataframe}
 \usage{
 exampleDataAWX()
 }
@@ -10,7 +10,7 @@ exampleDataAWX()
 AWX dataset with n = 1000 generated with exampleParams()
 }
 \description{
-Auxiliary function to create example dataset
+Auxiliary function to create example dataframe
 }
 \examples{
 set.seed(123)

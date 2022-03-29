@@ -22,7 +22,7 @@ exampleParams <- function() {
 }
 
 
-#' Auxiliary function to create example dataset
+#' Auxiliary function to create example dataframe
 #'
 #' @return AWX dataset with n = 1000 generated with exampleParams()
 #' @export
@@ -40,6 +40,18 @@ exampleDataAWX <- function(){
   return(AWX)
 }
 
+#' Auxiliary function to create example full data
+#'
+#' @param scenario string with scenario names
+#'
+#' @return RES list with n = 1000 generated with exampleParams()
+#' @export
+#'
+exampleDataRES <- function(scenario = "C4"){
+  params <- scenarioParams(scenario)
+  RES <- resSimCosine(n = 1000,params = params)
+  return(RES)
+}
 
 #' get gamma, lambda_0 and theta
 #'
@@ -79,17 +91,17 @@ RES2AWX <-
 #'
 #' @param scenario_name  "C1", "C2", "C3", "C4".
 #'
-#' @return params list with NA n. servers
+#' @return params list with example number of servers
 #' @export
 #'
 #' @examples
-#' scenarioParams("C3")
-scenarioParams <- function(scenario_name){
+#' scenarioParams("C4")
+scenarioParams <- function(scenario_name = "C4"){
   params <- switch (scenario_name,
-    "C1" = listParams(gamma = 10,lambda_0 = 10,theta = 2,5,eta = 1,mu = 1, s=NA),
-    "C2" = listParams(gamma = 40,lambda_0 = 10,theta = 2.5,eta = 1,mu = 1, s=NA),
-    "C3" = listParams(gamma = 1,lambda_0 = 12,theta = 1,eta = 1,mu = 1, s=NA),
-    "C4" = listParams(gamma = 100,lambda_0 = 50,theta = 10,eta = 1,mu = 1, s=NA)
+    "C1" = listParams(gamma = 10,lambda_0 = 10,theta = 2,5,eta = 1,mu = 1, s=5),
+    "C2" = listParams(gamma = 40,lambda_0 = 10,theta = 2.5,eta = 1,mu = 1, s=10),
+    "C3" = listParams(gamma = 1,lambda_0 = 12,theta = 1,eta = 1,mu = 1, s=2),
+    "C4" = listParams(gamma = 100,lambda_0 = 50,theta = 10,eta = 1,mu = 1, s=50)
   )
   return(params)
 }
