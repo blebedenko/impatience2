@@ -7,11 +7,11 @@
 oneKnownGrad(which_known, params, AWX)
 }
 \arguments{
-\item{which_known}{name of known parameter}
+\item{which_known}{Which of the parameter values is \emph{known} to the estimator? "theta", "gamma" or "lambda_0".}
 
-\item{params}{list of parameters}
+\item{params}{vector c(gamma, lambda_0, theta)}
 
-\item{AWX}{dataset}
+\item{AWX}{data}
 }
 \value{
 a gradient function for the two other parameter

@@ -4,9 +4,9 @@
 #' @param lambda_0 constant component of rate function
 #' @param theta parameter of exponential patience
 #' @param AWX compact simulation results for memory economy (A,W,X).
-#' @return The negative log-likelihood at the point provided.
+#' @return The negative log-likelihood at the point provided. Based on mean (instead of sum).
 #' @export
-negLogLik <- function(gamma,lambda_0,theta, AWX) {
+negLogLik <- function(gamma, lambda_0, theta, AWX) {
   # gamma <- params$gamma
   # lambda_0 <- params$lambda_0
   # theta <- params$theta
@@ -45,15 +45,17 @@ negLogLik <- function(gamma,lambda_0,theta, AWX) {
 #'
 #' @param g_l0_t vector c(gamma, lambda_0, theta)
 #' @param AWX AWX dataframe
-#' @param which_known if supplied, supposedly returns a partial likelihood where this is fixed.
 #' @return negative mean likelihood for the point g_l0_t
-negLogLik.vec <- function(g_l0_t, AWX, which_known = NULL){
-
+negLogLik.vec <- function(g_l0_t, AWX) {
   gamma <- g_l0_t[1]
   lambda_0 <- g_l0_t[2]
   theta <- g_l0_t[3]
-  if (is.null(which_known))
-    return(negLogLik(gamma = gamma, lambda_0 = lambda_0 , theta = theta, AWX = AWX))
+  return(negLogLik(
+      gamma = gamma,
+      lambda_0 = lambda_0 ,
+      theta = theta,
+      AWX = AWX
+    ))
   # one known parameter
   # if (length(which_known == 1)){
   #
@@ -71,8 +73,7 @@ negLogLik.vec <- function(g_l0_t, AWX, which_known = NULL){
 #'
 #' @return the gradient at (gamma,lambda_0,theta) for data AWX
 #' @export
-gradLogLik <- function(gamma,lambda_0,theta, AWX) {
-
+gradLogLik <- function(gamma, lambda_0, theta, AWX) {
   A <- AWX$A
   W <- AWX$W
   X <- AWX$X
@@ -129,7 +130,7 @@ gradLogLik <- function(gamma,lambda_0,theta, AWX) {
   negativeGradientMean <-
     -c(mean(dl_gamma), mean(dl_lambda_0), mean(dl_theta))
 
-  names(negativeGradientMean) <- c("gamma","lambda_0","theta")
+  names(negativeGradientMean) <- c("gamma", "lambda_0", "theta")
 
   return(negativeGradientMean)
 
@@ -140,15 +141,15 @@ gradLogLik <- function(gamma,lambda_0,theta, AWX) {
 
 #' Gradient of  likelihood, vector form
 #'
-#' @param g_l0_t vector c(gamma, lambda_0, theta)
+#' @param g_l0_t named vector c(gamma, lambda_0, theta)
 #' @param AWX AWX
 #'
 #' @return the gradient at (gamma,lambda_0,theta) for data AWX
 #' @export
 gradLogLik.vec <- function(g_l0_t, AWX) {
-  gamma <- g_l0_t[1]
-  lambda_0 <- g_l0_t[2]
-  theta <- g_l0_t[3]
+  gamma <- g_l0_t["gamma"]
+  lambda_0 <- g_l0_t["lambda_0"]
+  theta <- g_l0_t["theta"]
   A <- AWX$A
   W <- AWX$W
   X <- AWX$X
@@ -205,7 +206,7 @@ gradLogLik.vec <- function(g_l0_t, AWX) {
   negativeGradientMean <-
     -c(mean(dl_gamma), mean(dl_lambda_0), mean(dl_theta))
 
-  names(negativeGradientMean) <- c("gamma","lambda_0","theta")
+  names(negativeGradientMean) <- c("gamma", "lambda_0", "theta")
 
   return(negativeGradientMean)
 
@@ -213,19 +214,50 @@ gradLogLik.vec <- function(g_l0_t, AWX) {
 
 
 }
-#' Cheap evaluation of the gradient
-#'
-#' @param params list of parameters
-#' @param which_known vector of length 1-3, 1 = d_gamma 2 = d_lambda_0 3 = d_theta
-#' @param AWX data
-#'
-#' @return a named vector with the corresponding gradient for the unknown parameters
-grad.cheap <- function(params,which_known,AWX){
 
-  gamma <- params$gamma
-  lambda_0 <- params$lambda_0
-  theta <- params$theta
+#' generic gradient function
+#'
+#' @param point named vector of 2-3 of parameters (gamma,lambda_0,theta)
+#' @param AWX the dataset
+#' @param params the actual parameter values
+#'
+#' @return a named vector with the value of the gradient at point, assuming the
+#' unspecified parameter is \emph{known!}
+#' @export
+#'
+#' @examples
+#'
+#' params <- exampleParams()
+#' names(GL0T(params))
+#' AWX <- exampleDataAWX()
+#' point <- GL0T(params)[c("lambda_0","theta")]
+#' grad(point = point,AWX = AWX,params = params)
+#' point <- GL0T(params)[c("lambda_0","gamma")]
+#' grad(point = point,AWX = AWX,params = params)
+#' point <- GL0T(params)[c("gamma","lambda_0")]
+#' grad(point = point,AWX = AWX,params = params)
+#' point <- GL0T(params) + runif(3)
+#' grad(point = point,AWX = AWX,params = params)
+grad <- function(point,params,AWX){
+  if( length(point) == 3){ # no parameter is known
+    return(gradLogLik.vec(g_l0_t = point, AWX = AWX))
+  } else{
+  # which_known <- setdiff(names(GL0T(params)),names(point)) # name of the known parameter
+    return(gradOneKnown(point = point,params = params,AWX = AWX))
+  }
+}
 
+#' gradient when one parameter is known
+#'
+#' @param point named vector of the \emph{uknown} parameters.
+#' @param params simulation parameters
+#' @param AWX dataset
+#'
+#' @return The gradient at the supplied point
+#' @export
+#'
+gradOneKnown <- function(point,params, AWX){
+  which_known <- setdiff(names(GL0T(params)),names(point)) # name of the known parameter
   A <- AWX$A
   W <- AWX$W
   X <- AWX$X
@@ -237,10 +269,55 @@ grad.cheap <- function(params,which_known,AWX){
   w_i = W[-length(W)]
   x_i = X[-length(X)]
 
-  ANS <- list()
-  # if gamma is unknown:
-  if (!("gamma" %in% which_known)){
+  if (which_known == "gamma") {
+    # set gamma to the true value:
+    gamma <- params$gamma
+    lambda_0 <- point["lambda_0"]
+    theta <- point["theta"]
+    # compute derivatives by lambda_0 and theta only
+    #derivative by lambda_0:
+      dl_lambda_0 <-
+        1 / (gamma / 2 + lambda_0 + (gamma * cos(A_tilde_i * pi * 2)) / 2) -
+        (exp(-theta * (w_i + x_i)) * (exp(A_i * theta) - 1)) / theta
 
+      # derivative by theta:
+      dl_theta <-
+        -W_i + lambda_0 * 1 / theta ^ 2 * exp(-theta * (w_i + x_i)) * (exp(A_i *
+                                                                             theta) - 1) - (gamma * exp(-theta * (w_i + x_i)) * (
+                                                                               -cos(A_tilde_i * pi * 2) + exp(A_i * theta) * cos(pi * (A_i + A_tilde_i) *
+                                                                                                                                   2) + A_i * pi * sin(pi * (A_i + A_tilde_i) * 2) * exp(A_i * theta) * 2 +
+                                                                                 A_i * theta * exp(A_i * theta) * cos(pi * (A_i + A_tilde_i) * 2)
+                                                                             )) / (pi ^ 2 * 8 + theta ^ 2 * 2) + (gamma * 1 / theta ^ 2 * exp(-theta *
+                                                                                                                                                (w_i + x_i)) * (exp(A_i * theta) - 1)) / 2 + (gamma * exp(-theta * (w_i +
+                                                                                                                                                                                                                      x_i)) * (w_i + x_i) * (exp(A_i * theta) - 1)) / (theta * 2) - (
+                                                                                                                                                                                                                        gamma * exp(-theta * (w_i + x_i)) * (w_i + x_i) * (
+                                                                                                                                                                                                                          pi * sin(A_tilde_i * pi * 2) * 2 + theta * cos(A_tilde_i * pi * 2) - pi *
+                                                                                                                                                                                                                            sin(pi * (A_i + A_tilde_i) * 2) * exp(A_i * theta) * 2 - theta * exp(A_i *
+                                                                                                                                                                                                                                                                                                   theta) * cos(pi * (A_i + A_tilde_i) * 2)
+                                                                                                                                                                                                                        )
+                                                                                                                                                                                                                      ) / (pi ^ 2 * 8 + theta ^ 2 * 2) + (lambda_0 * exp(-theta * (w_i + x_i)) *
+                                                                                                                                                                                                                                                            (w_i + x_i) * (exp(A_i * theta) - 1)) / theta - gamma * theta * exp(-theta *
+                                                                                                                                                                                                                                                                                                                                  (w_i + x_i)) * 1 / (pi ^ 2 * 4 + theta ^ 2) ^ 2 * (
+                                                                                                                                                                                                                                                                                                                                    pi * sin(A_tilde_i * pi * 2) * 2 + theta * cos(A_tilde_i * pi * 2) - pi *
+                                                                                                                                                                                                                                                                                                                                      sin(pi * (A_i + A_tilde_i) * 2) * exp(A_i * theta) * 2 - theta * exp(A_i *
+                                                                                                                                                                                                                                                                                                                                                                                                             theta) * cos(pi * (A_i + A_tilde_i) * 2)
+                                                                                                                                                                                                                                                                                                                                  ) - (A_i * gamma * exp(A_i * theta) * exp(-theta * (w_i + x_i))) / (theta *
+                                                                                                                                                                                                                                                                                                                                                                                                        2) - (A_i * lambda_0 * exp(A_i * theta) * exp(-theta * (w_i + x_i))) / theta
+
+
+      # compute the negative of the gradient elements' mean
+      negativeGradientMean <-
+        -c(mean(dl_lambda_0), mean(dl_theta))
+
+      names(negativeGradientMean) <- c("lambda_0", "theta")
+
+    }
+  if (which_known == "lambda_0") {
+    theta <- point["theta"]
+    gamma <- point["gamma"]
+    # set lambda_0 to the true value:
+    lambda_0 <- params$lambda_0
+    # compute derivatives by gamma and theta only
     # derivative by gamma:
     dl_gamma <-
       (cos(A_tilde_i * pi * 2) / 2 + 1 / 2) /
@@ -252,20 +329,8 @@ grad.cheap <- function(params,which_known,AWX){
                                                                                                                                                                                                                                  theta) * cos(pi * (A_i + A_tilde_i) * 2)
                                                                                                                                                       )) / (pi ^ 2 * 8 + theta ^ 2 * 2)
 
-  ANS$dl_gamma <- dl_gamma
-    }
-    # if lambda_0 is unknown:
-    if (!("lambda_0" %in% which_known)){
-    #derivative by lambda_0:
-    dl_lambda_0 <-
-      1 / (gamma / 2 + lambda_0 + (gamma * cos(A_tilde_i * pi * 2)) / 2) -
-      (exp(-theta * (w_i + x_i)) * (exp(A_i * theta) - 1)) / theta
 
-    ANS$dl_lambda_0 <- dl_lambda_0
 
-  }
-  # if theta is unknown:
-    if (!("theta" %in% which_known)){
     # derivative by theta:
     dl_theta <-
       -W_i + lambda_0 * 1 / theta ^ 2 * exp(-theta * (w_i + x_i)) * (exp(A_i *
@@ -289,16 +354,48 @@ grad.cheap <- function(params,which_known,AWX){
                                                                                                                                                                                                                                                                                                                                                                                                            theta) * cos(pi * (A_i + A_tilde_i) * 2)
                                                                                                                                                                                                                                                                                                                                 ) - (A_i * gamma * exp(A_i * theta) * exp(-theta * (w_i + x_i))) / (theta *
                                                                                                                                                                                                                                                                                                                                                                                                       2) - (A_i * lambda_0 * exp(A_i * theta) * exp(-theta * (w_i + x_i))) / theta
-    ANS$dl_theta <- dl_theta
 
-    }
 
-  grad_vec <- Reduce(mean,ANS)
-  return(grad_vec * (-1))
+    # compute the negative of the gradient elements' mean
+    negativeGradientMean <-
+      -c(mean(dl_gamma), mean(dl_theta))
+
+    names(negativeGradientMean) <- c("gamma", "theta")
+
+  }
+  if (which_known == "theta") {
+    lambda_0 <- point["lambda_0"]
+    gamma <- point["gamma"]
+    # set theta to the true value:
+    theta <- params$theta
+    # compute derivatives by gamma and theta only
+    # derivative by gamma:
+    dl_gamma <-
+      (cos(A_tilde_i * pi * 2) / 2 + 1 / 2) /
+      (gamma / 2 + lambda_0 + (gamma * cos(A_tilde_i * pi * 2)) / 2) - (exp(-theta *
+                                                                              (w_i + x_i)) * (exp(A_i * theta) - 1)) / (theta * 2) + (exp(-theta * (w_i +
+                                                                                                                                                      x_i)) * (
+                                                                                                                                                        pi * sin(A_tilde_i * pi * 2) * 2 + theta * cos(A_tilde_i * pi * 2) - pi *
+                                                                                                                                                          sin(pi * (A_i + A_tilde_i) * 2) * exp(A_i * theta) * 2 - theta * exp(A_i *
+                                                                                                                                                                                                                                 theta) * cos(pi * (A_i + A_tilde_i) * 2)
+                                                                                                                                                      )) / (pi ^ 2 * 8 + theta ^ 2 * 2)
+    #derivative by lambda_0:
+      dl_lambda_0 <-
+      1 / (gamma / 2 + lambda_0 + (gamma * cos(A_tilde_i * pi * 2)) / 2) -
+      (exp(-theta * (w_i + x_i)) * (exp(A_i * theta) - 1)) / theta
+
+
+
+      # compute the negative of the gradient elements' mean
+      negativeGradientMean <-
+        -c(mean(dl_gamma), mean(dl_lambda_0))
+
+      names(negativeGradientMean) <- c("gamma", "lambda_0")
+  }
+  return(negativeGradientMean)
+
 
 }
-
-
 #' Function factory for partial likelihoods
 #'
 #' @param which_known Which of the parameter values is _known_ to the estimator? "theta", "gamma" or "lambda_0".
@@ -314,20 +411,19 @@ grad.cheap <- function(params,which_known,AWX){
 #' AWX <- resSimAWX(4,params)
 #' f <- oneKnownLik("theta",params = params,AWX = AWX)
 #' f(c(1,2)) # likelihood for gamma = 1 lambda_0 = 2
-oneKnownLik <- function(which_known,params, AWX){
-  gamma <- params$gamma
-  lambda_0 <- params$lambda_0
-  theta <- params$theta
+oneKnownLik <- function(which_known, params, AWX) {
+
 
   if (which_known == "gamma") {
-    negLik <- Vectorize(
-      FUN = negLogLik,
-      vectorize.args = c("lambda_0", "theta"),
-      SIMPLIFY = TRUE
-    )
+    # negLik <- Vectorize(
+    #   FUN = negLogLik,
+    #   vectorize.args = c("lambda_0", "theta"),
+    #   SIMPLIFY = TRUE
+    # )
     # likelihood for lambda_0, theta with known gamma
-    negLik <- purrr::partial(negLik, AWX = AWX, gamma = gamma)
-    oneLik <- function(lambda_0,theta) negLik(lambda_0,theta)
+    negLik <- purrr::partial(negLogLik, AWX = AWX, gamma = params$gamma)
+    oneLik <- function(lambda_0, theta)
+      negLik(lambda_0, theta)
 
   }
   if (which_known == "lambda_0") {
@@ -337,8 +433,9 @@ oneKnownLik <- function(which_known,params, AWX){
       SIMPLIFY = TRUE
     )
     # likelihood for gamma, theta with known lambda_0
-    negLik <- purrr::partial(negLik, AWX = AWX, lambda_0 = lambda_0)
-    oneLik <- function(gamma,theta) negLik(gamma,theta)
+    negLik <- purrr::partial(negLik, AWX = AWX, lambda_0 = params$lambda_0)
+    oneLik <- function(gamma, theta)
+      negLik(gamma, theta)
 
   }
   if (which_known == "theta") {
@@ -348,43 +445,44 @@ oneKnownLik <- function(which_known,params, AWX){
       SIMPLIFY = TRUE
     )
     # likelihood for gamma, lambda_0 with known theta
-    negLik <- purrr::partial(negLik, AWX = AWX, theta = theta)
-    oneLik <- function(gamma,lambda_0) negLik(gamma,lambda_0)
+    negLik <- purrr::partial(negLik, AWX = AWX, theta = params$theta)
+    oneLik <- function(gamma, lambda_0)
+      negLik(gamma, lambda_0)
   }
 
-  curr_params <- setdiff(c("gamma","lambda_0","theta"), which_known)
+  curr_params <- setdiff(c("gamma", "lambda_0", "theta"), which_known)
 
-  negLogL <- function(two_par_vec) oneLik(two_par_vec[1],two_par_vec[2]) # wrap it for optim
+  negLogL <-
+    function(two_par_vec)
+      oneLik(two_par_vec[1], two_par_vec[2]) # wrap it for optim
   return(negLogL)
 }
 
 #' Title f
 #'
-#' @param which_known name of known parameter
-#' @param params list of parameters
-#' @param AWX dataset
-#'
+#' @inheritParams oneKnownLik
 #' @return a gradient function for the two other parameter
 #' @export
-oneKnownGrad <- function(which_known,params, AWX){
+oneKnownGrad <- function(which_known, params, AWX) {
   # gamma <- params$gamma
   # lambda_0 <- params$lambda_0
   # theta <- params$theta
   which_uknown <- setdiff(names(GL0T(params)), which_known)
   if (which_known == "gamma") {
-
     # gradient for lambda_0, theta with known gamma
-    oneGrad <- purrr::partial(gradLogLik, AWX = AWX, gamma = params$gamma)
+    oneGrad <-
+      purrr::partial(gradLogLik, AWX = AWX, gamma = params$gamma)
 
-    }
+  }
 
   if (which_known == "lambda_0") {
-    oneGrad <- purrr::partial(gradLogLik, AWX = AWX, lambda_0 = params$lambda_0)
+    oneGrad <-
+      purrr::partial(gradLogLik, AWX = AWX, lambda_0 = params$lambda_0)
 
   }
   if (which_known == "theta") {
-
-    oneGrad <- purrr::partial(gradLogLik, AWX = AWX, theta = params$theta)
+    oneGrad <-
+      purrr::partial(gradLogLik, AWX = AWX, theta = params$theta)
 
   }
 
@@ -403,33 +501,112 @@ oneKnownGrad <- function(which_known,params, AWX){
 #' @return a function that computes likelihood for the the parameter which_not_known.
 #' The function's input is always a vector where the parameters are ordered alphabetically by their names, gamma before lambda_0 before theta.
 #' @export
-twoKnownLik <- function(which_not_known,params, AWX){
+twoKnownLik <- function(which_not_known, params, AWX) {
   gamma <- params$gamma
   lambda_0 <- params$lambda_0
   theta <- params$theta
 
-  negLik <- Vectorize(
-    FUN = negLogLik,
-    vectorize.args = which_not_known,
-    SIMPLIFY = TRUE
-  )
+  negLik <- Vectorize(FUN = negLogLik,
+                      vectorize.args = which_not_known,
+                      SIMPLIFY = TRUE)
 
   if (which_not_known == "gamma") {
-  oneLik <- purrr::partial(negLogLik,AWX = AWX, lambda_0 = lambda_0, theta = theta)
+    oneLik <-
+      purrr::partial(negLogLik,
+                     AWX = AWX,
+                     lambda_0 = lambda_0,
+                     theta = theta)
   }
   if (which_not_known == "lambda_0") {
-    oneLik <- purrr::partial(negLogLik,AWX = AWX, gamma = gamma, theta = theta)
+    oneLik <-
+      purrr::partial(negLogLik,
+                     AWX = AWX,
+                     gamma = gamma,
+                     theta = theta)
 
   }
   if (which_not_known == "theta") {
-    oneLik <- purrr::partial(negLogLik,AWX = AWX, gamma = gamma ,lambda_0 = lambda_0)
+    oneLik <-
+      purrr::partial(negLogLik,
+                     AWX = AWX,
+                     gamma = gamma ,
+                     lambda_0 = lambda_0)
 
   }
   return(Vectorize(oneLik))
 }
 
 
-#' Maximum likelihood estimation
+
+#' Compute all MLE's for a dataset
+#'
+#' @param AWX can be a dataframe or a path
+#' @param params parameter list
+#'
+#' @return named vector of all MLE's
+#' @export
+#'
+mleAll <- function(AWX, params) {
+  # if data provided
+  if (is.data.frame(AWX)) {
+    mle <- mleGetAll(AWX = AWX, params = params)
+  }
+  if (is.character(AWX)) {
+      mle <- mleGetAll(AWX = utils::read.csv(AWX), params = params)
+
+  }
+  return(mle)
+}
+
+#' get all MLE's for dataset
+#'
+#' @param AWX dataframe
+#' @param params parameter list
+#'
+#' @return a named vector with all possible MLE's
+#' @export
+#'
+mleGetAll <- function(AWX, params) {
+  mle <- c(
+    mleFull(AWX, params),
+    mleLiron(AWX),
+    mleOneKnown(
+      AWX = AWX,
+      params = params,
+      which_known = "gamma"
+    ),
+    mleOneKnown(
+      AWX = AWX,
+      params = params,
+      which_known = "lambda_0"
+    ),
+    mleOneKnown(
+      AWX = AWX,
+      params = params,
+      which_known = "theta"
+    ),
+    mleTwoKnown(
+      AWX = AWX,
+      params = params,
+      which_not_known = "gamma"
+    ),
+    mleTwoKnown(
+      AWX = AWX,
+      params = params,
+      which_not_known = "lambda_0"
+    ),
+    mleTwoKnown(
+      AWX = AWX,
+      params = params,
+      which_not_known = "theta"
+    )
+  )
+
+  return(mle)
+}
+
+
+#' Maximum likelihood estimation - Full model
 #'
 #' @param AWX AWX dataframe
 #' @param params vector c(gamma, lambda_0, theta)
@@ -455,7 +632,7 @@ mleFull <- function(AWX, params) {
 
   ans <- opt$par
   names(ans) <- c("gamma", "lambda_0", "theta")
-  return(list(ans = ans, boundary = is_boundary))
+  return(c(boris = ans, boundary = is_boundary))
 }
 
 
@@ -515,23 +692,31 @@ mleLiron <- function(AWX, acc = 1e-4) {
 #'
 #' @return Maximum likelihood estimates when one known parameter
 #' @export
-mleOneKnown <- function(AWX, params, which_known){
-
+mleOneKnown <- function(AWX, params, which_known) {
   which_uknown <- setdiff(names(GL0T(params)), which_known)
 
-  if (length(which_known) == 1){ # one uknown parameter
-    knownLik <- oneKnownLik(which_known = which_known,params = params,AWX = AWX)
+  if (length(which_known) == 1) {
+    # one uknown parameter
+    knownLik <-
+      oneKnownLik(which_known = which_known,
+                  params = params,
+                  AWX = AWX)
     # gradient to be implemented later
     opt <- optim(par = GL0T(params[which_uknown]),
-          fn = knownLik)
+                 upper = GL0T(params[which_uknown]) * 10,
+                 lower = GL0T(params[which_uknown]) / 10,
+                 method = "L-BFGS-B",
+                 fn = knownLik)
 
     # KG/L/T for known gamma,lambda_0, theta, resepctively
-    estimator_extension <- paste0("_K",toupper(which_known %>% stringr::str_sub(1,1)))
+    estimator_extension <-
+      paste0("_K", toupper(which_known %>% stringr::str_sub(1, 1)))
     mle <- opt$par
     names(mle) <- paste0(which_uknown, estimator_extension)
   }
   return(mle)
 }
+
 
 
 #' Mle with two known parameters
@@ -542,27 +727,40 @@ mleOneKnown <- function(AWX, params, which_known){
 #'
 #' @return Maximum likelihood estimates when one known parameter
 #' @export
-mleTwoKnown <- function(AWX, params, which_not_known){
-
+mleTwoKnown <- function(AWX, params, which_not_known) {
   gamma <- params$gamma
   lambda_0 <- params$lambda_0
   theta <- params$theta
 
   which_known <- setdiff(names(GL0T(params)), which_not_known)
   if (which_not_known == "gamma") {
-    oneLik <- purrr::partial(negLogLik,AWX = AWX, lambda_0 = lambda_0, theta = theta)
+    oneLik <-
+      purrr::partial(negLogLik,
+                     AWX = AWX,
+                     lambda_0 = lambda_0,
+                     theta = theta)
   }
   if (which_not_known == "lambda_0") {
-    oneLik <- purrr::partial(negLogLik,AWX = AWX, gamma = gamma, theta = theta)
+    oneLik <-
+      purrr::partial(negLogLik,
+                     AWX = AWX,
+                     gamma = gamma,
+                     theta = theta)
 
   }
   if (which_not_known == "theta") {
-    oneLik <- purrr::partial(negLogLik,AWX = AWX, gamma = gamma ,lambda_0 = lambda_0)
+    oneLik <-
+      purrr::partial(negLogLik,
+                     AWX = AWX,
+                     gamma = gamma ,
+                     lambda_0 = lambda_0)
 
   }
   oneLik.vec <- Vectorize(oneLik)
   opt <- stats::optimize(f = oneLik.vec,
-           lower =params[[which_not_known]]/10,
-           upper = params[[which_not_known]] * 10)
-  return(opt$minimum)
+                         lower = params[[which_not_known]] / 10,
+                         upper = params[[which_not_known]] * 10)
+  mle <- opt$minimum
+  names(mle) <- paste0(which_not_known, "_only")
+  return(mle)
 }

@@ -7,7 +7,7 @@
 gradLogLik.vec(g_l0_t, AWX)
 }
 \arguments{
-\item{g_l0_t}{vector c(gamma, lambda_0, theta)}
+\item{g_l0_t}{named vector c(gamma, lambda_0, theta)}
 
 \item{AWX}{AWX}
 }

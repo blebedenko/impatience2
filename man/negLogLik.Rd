@@ -17,7 +17,7 @@ negLogLik(gamma, lambda_0, theta, AWX)
 \item{AWX}{compact simulation results for memory economy (A,W,X).}
 }
 \value{
-The negative log-likelihood at the point provided.
+The negative log-likelihood at the point provided. Based on mean (instead of sum).
 }
 \description{
 (negative) mean log-likelihood for the sinusoidal arrivals model

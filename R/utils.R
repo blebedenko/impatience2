@@ -1,3 +1,46 @@
+#' Auxiliary function to create example parameters
+#'
+#' @return a list of example parameters
+#' @export
+#'
+#' @examples
+#' params <- listParams(gamma=1,lambda_0=2,theta=1, eta = 1, mu = 1 , s = 3)
+#' identical(params,exampleParams())
+
+exampleParams <- function() {
+  ex_pars <-
+    listParams(
+      gamma = 1,
+      lambda_0 = 2,
+      theta = 1,
+      eta = 1,
+      mu = 1 ,
+      s = 3
+    )
+  return(ex_pars)
+
+}
+
+
+#' Auxiliary function to create example dataset
+#'
+#' @return AWX dataset with n = 1000 generated with exampleParams()
+#' @export
+#'
+#' @examples
+#' set.seed(123)
+#' dat <- exampleDataAWX()
+#' set.seed(123)
+#' pars <- exampleParams()
+#' dat2 <- resSimAWX(n_thousands = 1,params = pars)
+#' identical(dat,dat2)
+exampleDataAWX <- function(){
+  params <- exampleParams()
+  AWX <- resSimAWX(n_thousands = 1,params = params)
+  return(AWX)
+}
+
+
 #' get gamma, lambda_0 and theta
 #'
 #' @param params  names list of parameters (output of 'listParams()').
@@ -32,6 +75,24 @@ RES2AWX <-
     ))
   }
 
+#' parameters by simulation scenario
+#'
+#' @param scenario_name  "C1", "C2", "C3", "C4".
+#'
+#' @return params list with NA n. servers
+#' @export
+#'
+#' @examples
+#' scenarioParams("C3")
+scenarioParams <- function(scenario_name){
+  params <- switch (scenario_name,
+    "C1" = listParams(gamma = 10,lambda_0 = 10,theta = 2,5,eta = 1,mu = 1, s=NA),
+    "C2" = listParams(gamma = 40,lambda_0 = 10,theta = 2.5,eta = 1,mu = 1, s=NA),
+    "C3" = listParams(gamma = 1,lambda_0 = 12,theta = 1,eta = 1,mu = 1, s=NA),
+    "C4" = listParams(gamma = 100,lambda_0 = 50,theta = 10,eta = 1,mu = 1, s=NA)
+  )
+  return(params)
+}
 
 
 #' Pipe

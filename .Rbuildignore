@@ -2,3 +2,5 @@
 ^\.Rproj\.user$
 ^dev\.R$
 ^LICENSE\.md$
+^[\.]csv$$
+^C4$

@@ -2,7 +2,7 @@
 % Please edit documentation in R/likelihood.R
 \name{mleFull}
 \alias{mleFull}
-\title{Maximum likelihood estimation}
+\title{Maximum likelihood estimation - Full model}
 \usage{
 mleFull(AWX, params)
 }
@@ -15,5 +15,5 @@ mleFull(AWX, params)
 A list with elements: ans - the mle's, boundary = logical indicating whether solution is on boundary
 }
 \description{
-Maximum likelihood estimation
+Maximum likelihood estimation - Full model
 }

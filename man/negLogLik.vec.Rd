@@ -4,14 +4,12 @@
 \alias{negLogLik.vec}
 \title{Wrapper for negLogLik to use with optim}
 \usage{
-negLogLik.vec(g_l0_t, AWX, which_known = NULL)
+negLogLik.vec(g_l0_t, AWX)
 }
 \arguments{
 \item{g_l0_t}{vector c(gamma, lambda_0, theta)}
 
 \item{AWX}{AWX dataframe}
-
-\item{which_known}{if supplied, supposedly returns a partial likelihood where this is fixed.}
 }
 \value{
 negative mean likelihood for the point g_l0_t

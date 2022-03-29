@@ -26,28 +26,7 @@ listParams <-
     return(par_list)
   }
 
-#' Auxiliary function to create example parameters
-#'
-#' @return a list of example parameters
-#' @export
-#'
-#' @examples
-#' params <- listParams(gamma=10,lambda_0=20,theta=2.5, eta = 1, mu = 1 , s = 3)
-#' identical(params,exampleParams())
 
-exampleParams <- function() {
-  ex_pars <-
-    listParams(
-      gamma = 10,
-      lambda_0 = 20,
-      theta = 2.5,
-      eta = 1,
-      mu = 1 ,
-      s = 3
-    )
-  return(ex_pars)
-
-}
 
 #' Rate function factory
 #'
@@ -725,7 +704,7 @@ makeAWXDirectories <- function() {
 
       foreach::foreach(
         i = 1:N_files,
-        .packages = c("tidyverse", "impatience","withr"),
+        .packages = c("tidyverse", "impatience2","withr"),
         .combine = list
       ) %dopar% {
         RES <- resSimAWX(n_thousands = n_thousands,
